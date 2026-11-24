@@ -1,4 +1,4 @@
-package web
+package ratelimit
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 func TestLimiterBlocksAfterMax(t *testing.T) {
 	t.Parallel()
 
-	l := NewLimiter(3, time.Hour)
+	l := New(3, time.Hour)
 	for range 3 {
 		if !l.Allow("k") {
 			t.Fatal("Allow = false before limit reached, want true")
@@ -26,7 +26,7 @@ func TestLimiterBlocksAfterMax(t *testing.T) {
 func TestLimiterWindowExpiry(t *testing.T) {
 	t.Parallel()
 
-	l := NewLimiter(1, 10*time.Millisecond)
+	l := New(1, 10*time.Millisecond)
 	l.Record("k")
 	if l.Allow("k") {
 		t.Error("Allow = true immediately after Record, want false")

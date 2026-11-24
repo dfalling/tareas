@@ -17,7 +17,10 @@ import (
 	// zoneinfo on disk, and APP_TIMEZONE must work there.
 	_ "time/tzdata"
 
+	"github.com/dfalling/tareas/internal/api"
 	"github.com/dfalling/tareas/internal/db"
+	"github.com/dfalling/tareas/internal/ratelimit"
+	"github.com/dfalling/tareas/internal/tokens"
 	"github.com/dfalling/tareas/internal/web"
 )
 
@@ -55,9 +58,22 @@ func run() error {
 	session := web.NewSessionManager(pool, envOrBool("COOKIE_SECURE", true))
 	app := web.New(pool, session, envOr("APP_LOCALE", "en"), loc)
 
+	// The API must never see session cookies and the web UI must never see
+	// bearer tokens, so each front-end keeps its own mux: the API is mounted
+	// first (the more specific prefix), everything else falls to the web UI.
+	apiApp := api.New(pool, loc, ratelimit.New(10, 5*time.Minute))
+	root := http.NewServeMux()
+	root.Handle("/api/v1/", apiApp.Routes())
+	root.Handle("/", app.Routes())
+
+	// Hygiene: purge expired API tokens hourly. (scs purges its own
+	// sessions.) It exits with the shutdown signal.
+	tokenStore := tokens.NewStore(pool)
+	go purgeExpiredTokens(ctx, tokenStore)
+
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           app.Routes(),
+		Handler:           root,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -91,6 +107,28 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// purgeExpiredTokens deletes API tokens past their expires_at on an hourly
+// ticker until the process is asked to shut down.
+func purgeExpiredTokens(ctx context.Context, store *tokens.Store) {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			n, err := store.PurgeExpired(ctx)
+			if err != nil {
+				slog.Error("purge expired api tokens", "err", err)
+				continue
+			}
+			if n > 0 {
+				slog.Info("purged expired api tokens", "count", n)
+			}
+		}
+	}
 }
 
 func envOrBool(key string, fallback bool) bool {

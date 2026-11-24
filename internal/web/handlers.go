@@ -13,13 +13,6 @@ import (
 	"github.com/dfalling/tareas/internal/users"
 )
 
-// dummyHash equalizes verification timing when the account does not exist,
-// so login latency does not reveal whether an email is registered.
-var dummyHash = func() string {
-	h, _ := users.HashPassword("timing-equalizer-not-a-real-password")
-	return h
-}()
-
 // setupForm renders the one-time bootstrap page; once an account exists it
 // redirects to the login page.
 func (a *App) setupForm(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +113,7 @@ func (a *App) loginSubmit(w http.ResponseWriter, r *http.Request) {
 	u, err := a.users.ByEmail(r.Context(), email)
 	if errors.Is(err, users.ErrNotFound) {
 		// Equalize timing with a real verification before failing.
-		_ = users.VerifyPassword(password, dummyHash)
+		users.VerifyDummy(password)
 	}
 	if err != nil && !errors.Is(err, users.ErrNotFound) {
 		a.serverError(w, err)

@@ -15,6 +15,7 @@ type catalog map[string]string
 var messages = map[string]catalog{
 	"en": {
 		"nav_logout":            "Log out",
+		"nav_tokens":            "API tokens",
 		"login_title":           "Log in",
 		"login_email_label":     "Email",
 		"login_password_label":  "Password",
@@ -52,6 +53,22 @@ var messages = map[string]catalog{
 		"edit_cancel":    "Cancel",
 		"edit_clear_due": "Clear due date",
 
+		"tokens_title":  "API tokens",
+		"tokens_intro":  "Tokens let API clients access your todos without your password. Copy a new token when you create it; it is shown only once.",
+		"tokens_empty":  "No API tokens yet.",
+		"tokens_create": "Create token",
+
+		"tokens_name_label":    "Name",
+		"tokens_name_hint":     "e.g. laptop, phone",
+		"tokens_name_required": "Give the token a name.",
+		"tokens_name_too_long": "Keep the name under 100 characters.",
+
+		"tokens_revoke":       "Revoke",
+		"tokens_revoke_aria":  "Revoke {{.Name}}",
+		"tokens_created":      "Created {{.Date}}",
+		"flash_token_created": "Token created — copy it now, it will not be shown again: {{.Token}}",
+		"flash_token_revoked": "Token revoked.",
+
 		"delete_title":    "Delete todo",
 		"delete_question": "Delete '{{.Title}}'? This cannot be undone.",
 		"delete_confirm":  "Yes, delete",
@@ -78,6 +95,7 @@ var messages = map[string]catalog{
 	},
 	"es": {
 		"nav_logout":            "Salir",
+		"nav_tokens":            "Tokens de API",
 		"login_title":           "Iniciar sesión",
 		"login_email_label":     "Correo electrónico",
 		"login_password_label":  "Contraseña",
@@ -114,6 +132,22 @@ var messages = map[string]catalog{
 		"edit_save":      "Guardar",
 		"edit_cancel":    "Cancelar",
 		"edit_clear_due": "Quitar fecha",
+
+		"tokens_title":  "Tokens de API",
+		"tokens_intro":  "Los tokens permiten que clientes de la API accedan a tus tareas sin tu contraseña. Copia un token nuevo al crearlo; solo se muestra una vez.",
+		"tokens_empty":  "Todavía no hay tokens de API.",
+		"tokens_create": "Crear token",
+
+		"tokens_name_label":    "Nombre",
+		"tokens_name_hint":     "p. ej. portátil, móvil",
+		"tokens_name_required": "Ponle un nombre al token.",
+		"tokens_name_too_long": "El nombre no puede superar los 100 caracteres.",
+
+		"tokens_revoke":       "Revocar",
+		"tokens_revoke_aria":  "Revocar {{.Name}}",
+		"tokens_created":      "Creado el {{.Date}}",
+		"flash_token_created": "Token creado: cópialo ahora, no se volverá a mostrar: {{.Token}}",
+		"flash_token_revoked": "Token revocado.",
 
 		"delete_title":    "Eliminar tarea",
 		"delete_question": "¿Eliminar '{{.Title}}'? No se puede deshacer.",

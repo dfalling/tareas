@@ -1,0 +1,31 @@
+{{define "content"}}
+<h1>{{.T "tokens_title"}}</h1>
+<p class="intro">{{.T "tokens_intro"}}</p>
+
+{{with .Error}}<p class="error">{{.}}</p>{{end}}
+
+{{if .Tokens.Tokens}}
+<ul class="tokens">
+    {{range .Tokens.Tokens}}
+    <li class="token">
+        <code>{{.Prefix}}…</code>
+        <span class="name">{{.Name}}</span>
+        <span class="created">{{.Created}}</span>
+        <form method="post" action="/settings/tokens/{{.ID}}/revoke" class="inline">
+            <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
+            <button type="submit" aria-label="{{.RevokeAria}}">{{$.T "tokens_revoke"}}</button>
+        </form>
+    </li>
+    {{end}}
+</ul>
+{{else}}
+<p class="empty">{{.T "tokens_empty"}}</p>
+{{end}}
+
+<form method="post" action="/settings/tokens" class="create">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+    <input type="text" name="name" value="{{.Tokens.Form.Name}}" required maxlength="100"
+           aria-label="{{.T "tokens_name_label"}}" placeholder="{{.T "tokens_name_hint"}}">
+    <button type="submit">{{.T "tokens_create"}}</button>
+</form>
+{{end}}

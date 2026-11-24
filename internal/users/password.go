@@ -35,3 +35,16 @@ func VerifyPassword(password, hash string) bool {
 	}
 	return match
 }
+
+// dummyHash equalizes verification timing when the account does not exist,
+// so login latency does not reveal whether an email is registered.
+var dummyHash = func() string {
+	h, _ := HashPassword("timing-equalizer-not-a-real-password")
+	return h
+}()
+
+// VerifyDummy runs a verification against a fixed hash. Login handlers call
+// it after a failed user lookup so both paths do the same Argon2id work.
+func VerifyDummy(password string) bool {
+	return VerifyPassword(password, dummyHash)
+}

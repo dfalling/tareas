@@ -1,4 +1,6 @@
-package web
+// Package ratelimit provides a small in-memory fixed-window rate limiter,
+// shared by the web login and the API login endpoints.
+package ratelimit
 
 import (
 	"sync"
@@ -12,20 +14,20 @@ type Limiter struct {
 	mu      sync.Mutex
 	max     int
 	window  time.Duration
-	entries map[string]*limiterEntry
+	entries map[string]*entry
 }
 
-type limiterEntry struct {
+type entry struct {
 	count int
 	start time.Time
 }
 
-// NewLimiter returns a limiter allowing max events per window per key.
-func NewLimiter(max int, window time.Duration) *Limiter {
+// New returns a limiter allowing max events per window per key.
+func New(max int, window time.Duration) *Limiter {
 	return &Limiter{
 		max:     max,
 		window:  window,
-		entries: make(map[string]*limiterEntry),
+		entries: make(map[string]*entry),
 	}
 }
 
@@ -56,7 +58,7 @@ func (l *Limiter) Record(key string) {
 		if len(l.entries) >= 1024 {
 			l.prune()
 		}
-		l.entries[key] = &limiterEntry{count: 1, start: time.Now()}
+		l.entries[key] = &entry{count: 1, start: time.Now()}
 		return
 	}
 	e.count++

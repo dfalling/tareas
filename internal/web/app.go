@@ -15,7 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/justinas/nosurf"
 
+	"github.com/dfalling/tareas/internal/ratelimit"
 	"github.com/dfalling/tareas/internal/todos"
+	"github.com/dfalling/tareas/internal/tokens"
 	"github.com/dfalling/tareas/internal/users"
 )
 
@@ -27,8 +29,9 @@ type App struct {
 	pool      *pgxpool.Pool
 	users     *users.Store
 	todos     *todos.Service
+	tokens    *tokens.Store
 	scs       *scs.SessionManager
-	limiter   *Limiter
+	limiter   *ratelimit.Limiter
 	locale    string
 	loc       *time.Location
 	csrf      *nosurf.CSRFHandler
@@ -42,8 +45,9 @@ func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string, loc *ti
 		pool:      pool,
 		users:     users.NewStore(pool),
 		todos:     todos.NewService(pool, loc),
+		tokens:    tokens.NewStore(pool),
 		scs:       session,
-		limiter:   NewLimiter(10, 5*time.Minute),
+		limiter:   ratelimit.New(10, 5*time.Minute),
 		locale:    resolveLocale(locale),
 		loc:       loc,
 		templates: parseTemplates(),
@@ -66,6 +70,9 @@ func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string, loc *ti
 	mux.Handle("POST /todos/{id}/toggle", app.requireAuth(http.HandlerFunc(app.todoToggle)))
 	mux.Handle("GET /todos/{id}/delete", app.requireAuth(http.HandlerFunc(app.todoDeleteConfirm)))
 	mux.Handle("POST /todos/{id}/delete", app.requireAuth(http.HandlerFunc(app.todoDelete)))
+	mux.Handle("GET /settings/tokens", app.requireAuth(http.HandlerFunc(app.tokensPage)))
+	mux.Handle("POST /settings/tokens", app.requireAuth(http.HandlerFunc(app.tokensCreate)))
+	mux.Handle("POST /settings/tokens/{id}/revoke", app.requireAuth(http.HandlerFunc(app.tokensRevoke)))
 	// Only /static/* is served; templates and everything else in assetFS stay
 	// unreachable because the mux pattern never routes those paths here.
 	mux.Handle("GET /static/", http.FileServerFS(assetFS))
@@ -95,7 +102,7 @@ func (a *App) Routes() http.Handler {
 }
 
 func parseTemplates() map[string]*template.Template {
-	pages := []string{"setup.html", "login.html", "todos.html", "edit.html", "delete.html"}
+	pages := []string{"setup.html", "login.html", "todos.html", "edit.html", "delete.html", "tokens.html"}
 	templates := make(map[string]*template.Template, len(pages))
 	for _, page := range pages {
 		t := template.Must(template.ParseFS(assetFS, "templates/base.html", "templates/"+page))
@@ -117,6 +124,7 @@ type viewData struct {
 	List   *listPage
 	Edit   *editPage
 	Delete *deletePage
+	Tokens *tokensPage
 }
 
 // tabLink is one entry of the tab navigation.
@@ -185,6 +193,30 @@ type deletePage struct {
 	ID       int64
 	Question string // prebuilt from a whole-sentence key + the todo's title
 	View     todos.View
+}
+
+// tokenRow is one rendered API-token row on the settings page. Display
+// labels are prebuilt in Go so the templates hold no formatting logic. The
+// plaintext token is never sent anywhere but the one-time flash after
+// creation.
+type tokenRow struct {
+	ID         int64
+	Prefix     string
+	Name       string
+	Created    string // localized "created <date>"
+	RevokeAria string // localized "revoke <name>"
+}
+
+// tokensPage is the payload of the API-token settings page.
+type tokensPage struct {
+	Tokens []tokenRow
+	Form   tokensForm
+}
+
+// tokensForm holds the create form's redisplay value after a validation
+// error, so nothing the user typed is lost.
+type tokensForm struct {
+	Name string
 }
 
 // T translates a UI key for the page's locale. A method (not a func field)

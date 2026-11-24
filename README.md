@@ -8,9 +8,35 @@ See [plan.md](plan.md) for the full architecture and decisions.
 
 ## Status
 
-Migrations, auth, the todos service layer, and the server-rendered todo UI
-(tabs, create/toggle/edit/delete) are in place. Next: the JSON API and the
-API-token settings page.
+Migrations, auth, the todos service layer, the server-rendered todo UI
+(tabs, create/toggle/edit/delete), the JSON API, and the API-token settings
+page are in place. Next: i18n message-table polish and ops (healthz checks,
+shutdown, backups, first deploy).
+
+## REST API (`/api/v1`)
+
+Bearer tokens only — session cookies never authenticate the API. Create a
+token on the web UI's *API tokens* settings page, or exchange credentials:
+
+```sh
+curl -X POST https://host/api/v1/auth/login \
+     -d '{"email": "me@example.com", "password": "..."}'
+# → {"token": "..."}
+
+curl -H "Authorization: Bearer $TOKEN" https://host/api/v1/todos
+```
+
+| Method & path | Behavior |
+|---|---|
+| `POST /api/v1/auth/login` | Verifies credentials, returns a fresh token |
+| `POST /api/v1/auth/logout` | Revokes the presented token |
+| `GET /api/v1/todos` | Flat active list, sorted by due date then title; `?includeCompleted=true` appends completed |
+| `POST /api/v1/todos` | Create (`title`, optional `notes`, ISO `due_date`); 201 |
+| `PATCH /api/v1/todos/{id}` | Partial: `title`, `notes` (null clears), `due_date` (null clears), `completed` |
+| `DELETE /api/v1/todos/{id}` | Hard delete; 204 |
+
+Errors are `{"error": "..."}`: 400 malformed JSON, 401 missing/bad/expired
+token, 404 unknown id, 422 validation.
 
 ## Development
 
@@ -18,7 +44,7 @@ API-token settings page.
 mise install                        # installs pinned Go, golangci-lint, sqlc, goose
 mise exec -- go test ./...
 mise exec -- golangci-lint run
-mise exec -- sqlc generate          # after editing internal/todos/queries
+mise exec -- sqlc generate          # after editing internal/todos/queries or internal/tokens/queries
 ```
 
 ## Deploy

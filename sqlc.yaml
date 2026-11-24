@@ -1,6 +1,7 @@
 # sqlc generates typed pgx/v5 code from the queries in internal/todos/queries
-# (run: `sqlc generate`; the pinned version lives in .mise.toml). Generated
-# code is committed, so builds and CI never need sqlc.
+# and internal/tokens/queries (run: `sqlc generate`; the pinned version lives
+# in .mise.toml). Generated code is committed, so builds and CI never need
+# sqlc.
 #
 # The schema is read from the goose migrations: sqlc parses the +goose Up
 # blocks and ignores the Down blocks.
@@ -34,5 +35,26 @@ sql:
             go_type:
               type: "time.Time"
           - column: "todos.updated_at"
+            go_type:
+              type: "time.Time"
+  - engine: "postgresql"
+    schema: "internal/db/migrations"
+    queries: "internal/tokens/queries"
+    gen:
+      go:
+        package: "tokensdb"
+        out: "internal/tokens/tokensdb"
+        sql_package: "pgx/v5"
+        emit_pointers_for_null_types: true
+        overrides:
+          - column: "api_tokens.last_used_at"
+            go_type:
+              type: "time.Time"
+              pointer: true
+          - column: "api_tokens.expires_at"
+            go_type:
+              type: "time.Time"
+              pointer: true
+          - column: "api_tokens.created_at"
             go_type:
               type: "time.Time"
