@@ -5,6 +5,19 @@ linters:
   default: standard
   enable:
     - gosec
+  exclusions:
+    rules:
+      # i18n catalogs are UI strings; gosec's credential heuristic (G101)
+      # false-positives on keys like "login_password_label".
+      - path: i18n\.go
+        linters:
+          - gosec
+        text: "G101"
+      # Test helpers only ever request the local httptest server.
+      - path: _test\.go
+        linters:
+          - gosec
+        text: "G704"
 
 formatters:
   enable:

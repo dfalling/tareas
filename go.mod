@@ -3,7 +3,11 @@ module github.com/dfalling/tareas
 go 1.27
 
 require (
+	github.com/alexedwards/argon2id v1.0.0
+	github.com/alexedwards/scs/pgxstore v0.0.0-20261119174900-ed2e92329119
+	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/jackc/pgx/v5 v5.13.0
+	github.com/justinas/nosurf v1.2.0
 	github.com/pressly/goose/v3 v3.30.1
 )
 
@@ -14,6 +18,8 @@ require (
 	github.com/mfridman/interpolate v0.2.0 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 )

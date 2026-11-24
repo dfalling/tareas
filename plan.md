@@ -116,8 +116,8 @@ Indexes:
 
 Notes:
 
-- **No `sessions` table in our migrations** — `scs` creates and manages its own
-  schema via pgxstore.
+- The `sessions` table (scs/pgxstore) is created by our migrations — pgxstore
+  does not auto-create its schema. scs's cleanup goroutine purges expired rows.
 - **No `position` column** — ordering is alphabetical, decided once, app-wide.
 - Timestamps for created/updated/completed; `due_date` stays a bare `DATE`.
 

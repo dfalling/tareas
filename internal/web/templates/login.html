@@ -1,0 +1,12 @@
+{{define "content"}}
+<h1>{{.T "login_title"}}</h1>
+{{with .Error}}<p class="error">{{.}}</p>{{end}}
+<form method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+    <label for="email">{{.T "login_email_label"}}</label>
+    <input type="email" id="email" name="email" required autocomplete="email" autofocus>
+    <label for="password">{{.T "login_password_label"}}</label>
+    <input type="password" id="password" name="password" required autocomplete="current-password">
+    <button type="submit">{{.T "login_submit"}}</button>
+</form>
+{{end}}

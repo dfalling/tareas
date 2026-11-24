@@ -1,0 +1,25 @@
+{{define "base"}}
+<!doctype html>
+<html lang="{{.Locale}}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} · Tareas</title>
+</head>
+<body>
+    <nav>
+        <strong>Tareas</strong>
+        {{if .Authenticated}}
+        <form method="post" action="/logout" class="inline">
+            <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+            <button type="submit">{{.T "nav_logout"}}</button>
+        </form>
+        {{end}}
+    </nav>
+    {{with .Flash}}<p class="flash">{{.}}</p>{{end}}
+    <main>
+        {{block "content" .}}{{end}}
+    </main>
+</body>
+</html>
+{{end}}

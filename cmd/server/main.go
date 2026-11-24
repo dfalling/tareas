@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/dfalling/tareas/internal/db"
+	"github.com/dfalling/tareas/internal/web"
 )
 
 func main() {
@@ -42,12 +44,12 @@ func run() error {
 		return fmt.Errorf("run migrations: %w", err)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", healthz)
+	session := web.NewSessionManager(pool, envOrBool("COOKIE_SECURE", true))
+	app := web.New(pool, session, envOr("APP_LOCALE", "en"))
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           app.Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -76,15 +78,18 @@ func run() error {
 	}
 }
 
-func healthz(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("ok\n"))
-}
-
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return fallback
+}
+
+func envOrBool(key string, fallback bool) bool {
+	if v := os.Getenv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
+		}
 	}
 	return fallback
 }
