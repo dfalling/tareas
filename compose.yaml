@@ -5,8 +5,10 @@ services:
   app:
     image: ghcr.io/dfalling/tareas:latest
     build: .
+    restart: unless-stopped
     environment:
       LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://tareas:password@db:5432/tareas?sslmode=disable"
       APP_TIMEZONE: "UTC"
       APP_LOCALE: "en"
     ports:
@@ -17,6 +19,7 @@ services:
 
   db:
     image: postgres:18-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: tareas
       POSTGRES_PASSWORD: password

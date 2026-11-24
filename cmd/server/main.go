@@ -4,12 +4,15 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/dfalling/tareas/internal/db"
 )
 
 func main() {
@@ -21,6 +24,23 @@ func main() {
 
 func run() error {
 	addr := envOr("LISTEN_ADDR", ":8080")
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return errors.New("DATABASE_URL is required")
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	pool, err := db.Connect(ctx, dsn)
+	if err != nil {
+		return fmt.Errorf("connect to database: %w", err)
+	}
+	defer pool.Close()
+
+	if err := db.Migrate(ctx, dsn); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthz)
@@ -33,9 +53,6 @@ func run() error {
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() {
