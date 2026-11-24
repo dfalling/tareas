@@ -1,0 +1,33 @@
+# Local development / self-hosted deployment.
+# For production, supply secrets via Docker secrets or an uncommitted .env.
+
+services:
+  app:
+    image: ghcr.io/dfalling/tareas:latest
+    build: .
+    environment:
+      LISTEN_ADDR: ":8080"
+      APP_TIMEZONE: "UTC"
+      APP_LOCALE: "en"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: tareas
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tareas
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tareas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

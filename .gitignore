@@ -1,0 +1,14 @@
+# binaries
+/server
+/tareas
+*.test
+
+# coverage / profiles
+*.out
+
+# local env files
+.env
+.env.*
+
+# editor / OS
+.DS_Store

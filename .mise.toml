@@ -1,0 +1,9 @@
+# Tool versions pinned for local dev and CI.
+# CI uses jdx/mise-action, which reads this same file — one source of truth.
+# Renovate keeps these current (mise manager, non-major automerge).
+
+[tools]
+go = "1.27.4"
+golangci-lint = "2.15.0"
+sqlc = "1.31.1"
+"aqua:pressly/goose" = "3.30.1"
