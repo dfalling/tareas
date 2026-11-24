@@ -28,6 +28,7 @@ type App struct {
 	scs       *scs.SessionManager
 	limiter   *Limiter
 	locale    string
+	csrf      *nosurf.CSRFHandler
 	templates map[string]*template.Template
 }
 
@@ -41,6 +42,20 @@ func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string) *App {
 		locale:    resolveLocale(locale),
 		templates: parseTemplates(),
 	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/todos", http.StatusSeeOther)
+	})
+	mux.HandleFunc("GET /healthz", healthz)
+	mux.HandleFunc("GET /setup", app.setupForm)
+	mux.HandleFunc("POST /setup", app.setupSubmit)
+	mux.HandleFunc("GET /login", app.loginForm)
+	mux.HandleFunc("POST /login", app.loginSubmit)
+	mux.HandleFunc("POST /logout", app.logout)
+	mux.Handle("GET /todos", app.requireAuth(http.HandlerFunc(app.todosPage)))
+
+	app.csrf = nosurf.New(mux)
 	return app
 }
 
@@ -61,19 +76,7 @@ func NewSessionManager(pool *pgxpool.Pool, secureCookies bool) *scs.SessionManag
 // Routes returns the HTTP handler for the HTML UI: session middleware
 // outermost, CSRF protection inside it, then the routes.
 func (a *App) Routes() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/todos", http.StatusSeeOther)
-	})
-	mux.HandleFunc("GET /healthz", healthz)
-	mux.HandleFunc("GET /setup", a.setupForm)
-	mux.HandleFunc("POST /setup", a.setupSubmit)
-	mux.HandleFunc("GET /login", a.loginForm)
-	mux.HandleFunc("POST /login", a.loginSubmit)
-	mux.HandleFunc("POST /logout", a.logout)
-	mux.Handle("GET /todos", a.requireAuth(http.HandlerFunc(a.todosPage)))
-
-	return a.scs.LoadAndSave(nosurf.New(mux))
+	return a.scs.LoadAndSave(a.csrf)
 }
 
 func parseTemplates() map[string]*template.Template {
@@ -89,7 +92,6 @@ func parseTemplates() map[string]*template.Template {
 // viewData carries everything the templates need.
 type viewData struct {
 	Locale        string
-	T             func(string) string
 	CSRF          string
 	Title         string
 	Authenticated bool
@@ -97,10 +99,15 @@ type viewData struct {
 	Error         string
 }
 
+// T translates a UI key for the page's locale. A method (not a func field)
+// because text/template can only invoke methods with arguments.
+func (v viewData) T(key string) string {
+	return translator(v.Locale)(key)
+}
+
 func (a *App) viewData(r *http.Request) viewData {
 	return viewData{
 		Locale:        a.locale,
-		T:             translator(a.locale),
 		CSRF:          nosurf.Token(r),
 		Authenticated: a.scs.GetBool(r.Context(), sessionKeyAuthenticated),
 		Flash:         a.scs.PopString(r.Context(), sessionKeyFlash),

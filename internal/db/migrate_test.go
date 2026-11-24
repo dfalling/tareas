@@ -40,13 +40,13 @@ func TestMigrateCreatesSchema(t *testing.T) {
 		SELECT count(*)
 		FROM information_schema.tables
 		WHERE table_schema = 'public'
-		  AND table_name IN ('users', 'api_tokens', 'todos')
+		  AND table_name IN ('users', 'api_tokens', 'todos', 'sessions')
 	`).Scan(&tables)
 	if err != nil {
 		t.Fatalf("query tables: %v", err)
 	}
-	if tables != 3 {
-		t.Errorf("got %d expected tables, want 3", tables)
+	if tables != 4 {
+		t.Errorf("got %d expected tables, want 4", tables)
 	}
 
 	// The plan requires a plain DATE column for due dates — no times.

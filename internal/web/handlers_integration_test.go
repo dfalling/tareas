@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -39,6 +40,9 @@ func TestAuthFlow(t *testing.T) {
 	}
 
 	app := New(pool, NewSessionManager(pool, false), "en")
+	// nosurf defaults to assuming TLS (Secure CSRF cookie), which a plain-http
+	// httptest server cannot carry; disable for the test.
+	app.csrf.SetIsTLSFunc(func(*http.Request) bool { return false })
 	ts := httptest.NewServer(app.Routes())
 	defer ts.Close()
 
@@ -154,7 +158,19 @@ func mustGet(t *testing.T, client *http.Client, target string) *http.Response {
 
 func postForm(t *testing.T, client *http.Client, target string, form url.Values) *http.Response {
 	t.Helper()
-	res, err := client.PostForm(target, form)
+	req, err := http.NewRequest(http.MethodPost, target, strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatalf("build POST %s: %v", target, err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// Like a browser form POST: Origin is present and matches the server,
+	// which nosurf's same-origin check requires.
+	u, err := url.Parse(target)
+	if err != nil {
+		t.Fatalf("parse %s: %v", target, err)
+	}
+	req.Header.Set("Origin", u.Scheme+"://"+u.Host)
+	res, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("POST %s: %v", target, err)
 	}
@@ -177,5 +193,7 @@ func extractCSRF(t *testing.T, body string) string {
 	if m == nil {
 		t.Fatal("no csrf_token input in response body")
 	}
-	return m[1]
+	// html/template escapes "+" as "&#43;" in attribute values; a browser
+	// decodes entities when reading the field, so do the same here.
+	return html.UnescapeString(m[1])
 }
