@@ -1,4 +1,51 @@
 {{define "content"}}
-<h1>{{.T "todos_title"}}</h1>
-<p>{{.T "todos_empty"}}</p>
+<nav class="tabs">
+    {{range .List.Tabs}}<a href="{{.URL}}"{{if .Active}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
+</nav>
+
+<form method="post" action="/todos?view={{.List.View}}" class="create">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+    <input type="text" name="title" value="{{.List.Create.Title}}" required maxlength="500"
+           aria-label="{{.T "label_title"}}" autofocus>
+    <input type="text" name="notes" value="{{.List.Create.Notes}}" maxlength="10000"
+           aria-label="{{.T "label_notes"}}">
+    <input type="date" name="due_date" value="{{.List.Create.DueDate}}" aria-label="{{.T "label_due"}}">
+    <button type="submit">{{.T "create_submit"}}</button>
+</form>
+
+{{with .Error}}<p class="error">{{.}}</p>{{end}}
+
+<h1>{{.List.Heading}}</h1>
+
+{{if .List.Upcoming}}
+    {{range .List.Upcoming}}
+    <h2>{{.Label}}</h2>
+    {{template "todoList" .Items}}
+    {{end}}
+{{else if .List.Active.Items}}
+    {{template "todoList" .List.Active}}
+{{else}}
+    <p class="empty">{{.T "todos_empty"}}</p>
+{{end}}
+{{end}}
+
+{{define "todoList"}}
+{{$list := .}}
+<ul class="todos">
+    {{range .Items}}
+    <li id="todo-{{.ID}}" class="todo{{if .Completed}} done{{end}}">
+        <form method="post" action="/todos/{{.ID}}/toggle?view={{$list.View}}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{$list.CSRF}}">
+            <button type="submit" class="checkbox" aria-label="{{.ToggleAria}}"></button>
+        </form>
+        <a class="title" href="/todos/{{.ID}}/edit?view={{$list.View}}">{{.Title}}</a>
+        {{with .Overdue}}<span class="overdue">{{.}}</span>{{end}}
+        {{with .Done}}<span class="done">{{.}}</span>{{end}}
+        <form method="post" action="/todos/{{.ID}}/delete?view={{$list.View}}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{$list.CSRF}}">
+            <button type="submit" class="remove" aria-label="{{.DeleteAria}}">✕</button>
+        </form>
+    </li>
+    {{end}}
+</ul>
 {{end}}

@@ -15,31 +15,37 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/justinas/nosurf"
 
+	"github.com/dfalling/tareas/internal/todos"
 	"github.com/dfalling/tareas/internal/users"
 )
 
-//go:embed templates
-var templateFS embed.FS
+//go:embed templates static
+var assetFS embed.FS
 
 // App holds the dependencies of the HTML UI.
 type App struct {
 	pool      *pgxpool.Pool
 	users     *users.Store
+	todos     *todos.Service
 	scs       *scs.SessionManager
 	limiter   *Limiter
 	locale    string
+	loc       *time.Location
 	csrf      *nosurf.CSRFHandler
 	templates map[string]*template.Template
 }
 
-// New wires up the HTML UI.
-func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string) *App {
+// New wires up the HTML UI. loc is the app timezone (APP_TIMEZONE): "today",
+// due-date display, and the completed marker are all computed in it.
+func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string, loc *time.Location) *App {
 	app := &App{
 		pool:      pool,
 		users:     users.NewStore(pool),
+		todos:     todos.NewService(pool, loc),
 		scs:       session,
 		limiter:   NewLimiter(10, 5*time.Minute),
 		locale:    resolveLocale(locale),
+		loc:       loc,
 		templates: parseTemplates(),
 	}
 
@@ -53,7 +59,16 @@ func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string) *App {
 	mux.HandleFunc("GET /login", app.loginForm)
 	mux.HandleFunc("POST /login", app.loginSubmit)
 	mux.HandleFunc("POST /logout", app.logout)
-	mux.Handle("GET /todos", app.requireAuth(http.HandlerFunc(app.todosPage)))
+	mux.Handle("GET /todos", app.requireAuth(http.HandlerFunc(app.todoList)))
+	mux.Handle("POST /todos", app.requireAuth(http.HandlerFunc(app.todoCreate)))
+	mux.Handle("GET /todos/{id}/edit", app.requireAuth(http.HandlerFunc(app.todoEditForm)))
+	mux.Handle("POST /todos/{id}/edit", app.requireAuth(http.HandlerFunc(app.todoEditSubmit)))
+	mux.Handle("POST /todos/{id}/toggle", app.requireAuth(http.HandlerFunc(app.todoToggle)))
+	mux.Handle("GET /todos/{id}/delete", app.requireAuth(http.HandlerFunc(app.todoDeleteConfirm)))
+	mux.Handle("POST /todos/{id}/delete", app.requireAuth(http.HandlerFunc(app.todoDelete)))
+	// Only /static/* is served; templates and everything else in assetFS stay
+	// unreachable because the mux pattern never routes those paths here.
+	mux.Handle("GET /static/", http.FileServerFS(assetFS))
 
 	app.csrf = nosurf.New(mux)
 	return app
@@ -80,16 +95,17 @@ func (a *App) Routes() http.Handler {
 }
 
 func parseTemplates() map[string]*template.Template {
-	pages := []string{"setup.html", "login.html", "todos.html"}
+	pages := []string{"setup.html", "login.html", "todos.html", "edit.html", "delete.html"}
 	templates := make(map[string]*template.Template, len(pages))
 	for _, page := range pages {
-		t := template.Must(template.ParseFS(templateFS, "templates/base.html", "templates/"+page))
+		t := template.Must(template.ParseFS(assetFS, "templates/base.html", "templates/"+page))
 		templates[page] = t
 	}
 	return templates
 }
 
-// viewData carries everything the templates need.
+// viewData carries everything every page needs, plus exactly one page
+// payload (List, Edit, or Delete) that the page's content block consumes.
 type viewData struct {
 	Locale        string
 	CSRF          string
@@ -97,6 +113,78 @@ type viewData struct {
 	Authenticated bool
 	Flash         string
 	Error         string
+
+	List   *listPage
+	Edit   *editPage
+	Delete *deletePage
+}
+
+// tabLink is one entry of the tab navigation.
+type tabLink struct {
+	Label  string
+	URL    string
+	Active bool
+}
+
+// todoItem is one rendered todo row, with its labels prebuilt in Go so the
+// templates hold no formatting logic. Titles are user data and are never
+// translated; they are only inserted as-is (html/template escapes them).
+type todoItem struct {
+	ID         int64
+	Title      string
+	Completed  bool
+	ToggleAria string
+	DeleteAria string
+	Overdue    string // localized "overdue · dd-mm-yy"; empty when not overdue
+	Done       string // localized "done today"/"done dd-mm-yy"; completed only
+}
+
+// itemListView is a flat list of todo rows plus what their forms need.
+type itemListView struct {
+	Items []todoItem
+	View  todos.View
+	CSRF  string
+}
+
+// dayGroupView is one Upcoming section: a day heading and its rows.
+type dayGroupView struct {
+	Label string
+	Items itemListView
+}
+
+// createForm holds the inline create form's redisplay values after a
+// validation error, so nothing the user typed is lost.
+type createForm struct {
+	Title   string
+	Notes   string
+	DueDate string
+}
+
+// listPage is the payload of the tabbed todo page: navigation, the active
+// section, and the inline create form.
+type listPage struct {
+	View     todos.View
+	Tabs     []tabLink
+	Heading  string
+	Active   itemListView   // today, unscheduled, and completed tabs
+	Upcoming []dayGroupView // upcoming tab: one group per day
+	Create   createForm
+}
+
+// editPage is the payload of the per-todo edit page.
+type editPage struct {
+	ID      int64
+	Title   string
+	Notes   string
+	DueDate string // ISO yyyy-mm-dd for <input type="date">; empty = none
+	View    todos.View
+}
+
+// deletePage is the payload of the delete confirmation page.
+type deletePage struct {
+	ID       int64
+	Question string // prebuilt from a whole-sentence key + the todo's title
+	View     todos.View
 }
 
 // T translates a UI key for the page's locale. A method (not a func field)
@@ -112,6 +200,16 @@ func (a *App) viewData(r *http.Request) viewData {
 		Authenticated: a.scs.GetBool(r.Context(), sessionKeyAuthenticated),
 		Flash:         a.scs.PopString(r.Context(), sessionKeyFlash),
 	}
+}
+
+// t and tf are the handlers' shortcuts for translating plain keys and
+// parameterized whole-sentence keys.
+func (a *App) t(key string) string {
+	return translator(a.locale)(key)
+}
+
+func (a *App) tf(key string, data map[string]string) string {
+	return translatef(a.locale, key, data)
 }
 
 func (a *App) render(w http.ResponseWriter, status int, page string, data viewData) {

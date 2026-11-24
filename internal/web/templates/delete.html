@@ -1,0 +1,9 @@
+{{define "content"}}
+<h1>{{.T "delete_title"}}</h1>
+<p>{{.Delete.Question}}</p>
+<form method="post" action="/todos/{{.Delete.ID}}/delete?view={{.Delete.View}}" class="row">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+    <button type="submit" class="danger">{{.T "delete_confirm"}}</button>
+    <a href="/todos?view={{.Delete.View}}" class="button">{{.T "delete_cancel"}}</a>
+</form>
+{{end}}

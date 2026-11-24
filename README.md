@@ -8,8 +8,9 @@ See [plan.md](plan.md) for the full architecture and decisions.
 
 ## Status
 
-Migrations, auth (one-time setup, login, sessions), and the todos service layer
-are in place. Next: the tabbed todo UI and the JSON API.
+Migrations, auth, the todos service layer, and the server-rendered todo UI
+(tabs, create/toggle/edit/delete) are in place. Next: the JSON API and the
+API-token settings page.
 
 ## Development
 

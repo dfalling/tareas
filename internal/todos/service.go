@@ -15,14 +15,15 @@ import (
 // front-ends call these methods, so behavior exists exactly once. It is also
 // the seam handler tests fake (each consumer defines the interface it needs).
 type Service struct {
-	q   *todosdb.Queries
-	loc *time.Location
+	pool *pgxpool.Pool
+	q    *todosdb.Queries
+	loc  *time.Location
 }
 
 // NewService returns a service backed by pool. loc is the app timezone
 // (APP_TIMEZONE); "today" is always computed in it, never by SQL.
 func NewService(pool *pgxpool.Pool, loc *time.Location) *Service {
-	return &Service{q: todosdb.New(pool), loc: loc}
+	return &Service{pool: pool, q: todosdb.New(pool), loc: loc}
 }
 
 // Today returns the calendar date of now in the app timezone, normalized to
@@ -118,6 +119,50 @@ func (s *Service) SetDueDate(ctx context.Context, userID, id int64, due *time.Ti
 	return todoOrNotFound(row, err)
 }
 
+// UpdateInput carries a full edit: title, notes, and due date (nil clears it).
+type UpdateInput struct {
+	Title   string
+	Notes   string
+	DueDate *time.Time
+}
+
+// Update rewrites title, notes, and due date in one transaction — the edit
+// form submits the three together, so they must land together.
+func (s *Service) Update(ctx context.Context, userID, id int64, in UpdateInput) (Todo, error) {
+	title, notes, err := validate(in.Title, in.Notes)
+	if err != nil {
+		return Todo{}, err
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Todo{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }() // no-op after Commit
+
+	q := s.q.WithTx(tx)
+	if _, err := q.UpdateTodoMeta(ctx, todosdb.UpdateTodoMetaParams{
+		ID:     id,
+		Title:  title,
+		Notes:  notes,
+		UserID: userID,
+	}); err != nil {
+		return Todo{}, mapNoRows(err)
+	}
+	row, err := q.SetTodoDueDate(ctx, todosdb.SetTodoDueDateParams{
+		ID:      id,
+		DueDate: normalizeDueDate(in.DueDate),
+		UserID:  userID,
+	})
+	if err != nil {
+		return Todo{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Todo{}, err
+	}
+	return todoFromRow(row), nil
+}
+
 // Toggle flips completed. Completing stamps completed_at; reopening clears it.
 func (s *Service) Toggle(ctx context.Context, userID, id int64) (Todo, error) {
 	row, err := s.q.ToggleTodo(ctx, todosdb.ToggleTodoParams{ID: id, UserID: userID})
@@ -137,11 +182,16 @@ func (s *Service) Delete(ctx context.Context, userID, id int64) error {
 	return nil
 }
 
-func todoOrNotFound(row todosdb.Todo, err error) (Todo, error) {
+// mapNoRows translates "no such row" into the package's ErrNotFound.
+func mapNoRows(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Todo{}, ErrNotFound
+		return ErrNotFound
 	}
-	if err != nil {
+	return err
+}
+
+func todoOrNotFound(row todosdb.Todo, err error) (Todo, error) {
+	if err := mapNoRows(err); err != nil {
 		return Todo{}, err
 	}
 	return todoFromRow(row), nil

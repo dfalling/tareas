@@ -18,6 +18,14 @@ linters:
         linters:
           - gosec
         text: "G704"
+      # PRG redirects carry the current tab through, but the ?view= value is
+      # whitelisted by todos.ParseView (a fixed set of constants) before it
+      # reaches the target, so gosec's open-redirect taint analysis (G710)
+      # cannot see the sanitization and false-positives on handlers.go.
+      - path: handlers\.go
+        linters:
+          - gosec
+        text: "G710"
 
 formatters:
   enable:

@@ -13,6 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	// Embedded timezone database: the distroless runtime image has no
+	// zoneinfo on disk, and APP_TIMEZONE must work there.
+	_ "time/tzdata"
+
 	"github.com/dfalling/tareas/internal/db"
 	"github.com/dfalling/tareas/internal/web"
 )
@@ -30,6 +34,10 @@ func run() error {
 	if dsn == "" {
 		return errors.New("DATABASE_URL is required")
 	}
+	loc, err := time.LoadLocation(envOr("APP_TIMEZONE", "UTC"))
+	if err != nil {
+		return fmt.Errorf("load APP_TIMEZONE: %w", err)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -45,7 +53,7 @@ func run() error {
 	}
 
 	session := web.NewSessionManager(pool, envOrBool("COOKIE_SECURE", true))
-	app := web.New(pool, session, envOr("APP_LOCALE", "en"))
+	app := web.New(pool, session, envOr("APP_LOCALE", "en"), loc)
 
 	srv := &http.Server{
 		Addr:              addr,

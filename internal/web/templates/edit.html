@@ -1,0 +1,18 @@
+{{define "content"}}
+<h1>{{.T "edit_title"}}</h1>
+{{with .Error}}<p class="error">{{.}}</p>{{end}}
+<form method="post" action="/todos/{{.Edit.ID}}/edit?view={{.Edit.View}}" class="stack">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+    <label for="title">{{.T "label_title"}}</label>
+    <input type="text" id="title" name="title" value="{{.Edit.Title}}" required maxlength="500">
+    <label for="notes">{{.T "label_notes"}}</label>
+    <textarea id="notes" name="notes" maxlength="10000" rows="4">{{.Edit.Notes}}</textarea>
+    <label for="due_date">{{.T "label_due"}}</label>
+    <input type="date" id="due_date" name="due_date" value="{{.Edit.DueDate}}">
+    <div class="row">
+        <button type="submit">{{.T "edit_save"}}</button>
+        <button type="submit" name="clear_due" value="1" class="secondary">{{.T "edit_clear_due"}}</button>
+        <a href="/todos?view={{.Edit.View}}" class="button">{{.T "edit_cancel"}}</a>
+    </div>
+</form>
+{{end}}

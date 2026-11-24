@@ -219,6 +219,27 @@ func TestTodoService(t *testing.T) {
 		t.Errorf("second delete: err = %v, want ErrNotFound", err)
 	}
 
+	// Update rewrites title, notes, and due date together — the edit form
+	// submits the three as one change, so they land in one transaction.
+	notebook, err := svc.Create(ctx, owner.ID, CreateInput{Title: "notebook"})
+	if err != nil {
+		t.Fatalf("create notebook: %v", err)
+	}
+	updated, err := svc.Update(ctx, owner.ID, notebook.ID, UpdateInput{
+		Title:   "notebook A5",
+		Notes:   "dotted",
+		DueDate: mustDate(t, "2026-08-01"),
+	})
+	if err != nil {
+		t.Fatalf("update notebook: %v", err)
+	}
+	if updated.Title != "notebook A5" || updated.Notes == nil || *updated.Notes != "dotted" || updated.DueDate == nil || !updated.DueDate.Equal(*mustDate(t, "2026-08-01")) {
+		t.Fatalf("updated notebook = %+v", updated)
+	}
+	if _, err := svc.Update(ctx, other.ID, notebook.ID, UpdateInput{Title: "steal"}); !errors.Is(err, ErrNotFound) {
+		t.Errorf("Update across users: err = %v, want ErrNotFound", err)
+	}
+
 	// Validation runs before any query: a blank title is rejected.
 	if _, err := svc.Create(ctx, owner.ID, CreateInput{Title: "   "}); !errors.Is(err, ErrTitleRequired) {
 		t.Errorf("blank title: err = %v, want ErrTitleRequired", err)

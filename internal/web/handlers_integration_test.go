@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -67,7 +68,7 @@ func TestAuthFlow(t *testing.T) {
 		t.Fatalf("truncate: %v", err)
 	}
 
-	app := New(pool, NewSessionManager(pool, false), "en")
+	app := New(pool, NewSessionManager(pool, false), "en", time.UTC)
 	// nosurf defaults to assuming TLS (Secure CSRF cookie), which a plain-http
 	// httptest server cannot carry; disable for the test.
 	app.csrf.SetIsTLSFunc(func(*http.Request) bool { return false })
