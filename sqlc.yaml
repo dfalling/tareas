@@ -1,0 +1,38 @@
+# sqlc generates typed pgx/v5 code from the queries in internal/todos/queries
+# (run: `sqlc generate`; the pinned version lives in .mise.toml). Generated
+# code is committed, so builds and CI never need sqlc.
+#
+# The schema is read from the goose migrations: sqlc parses the +goose Up
+# blocks and ignores the Down blocks.
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "internal/db/migrations"
+    queries: "internal/todos/queries"
+    gen:
+      go:
+        package: "todosdb"
+        out: "internal/todos/todosdb"
+        sql_package: "pgx/v5"
+        emit_pointers_for_null_types: true
+        overrides:
+          # Nullable columns as plain Go pointers, so the service works with
+          # *string / *time.Time instead of pgtype structs.
+          - column: "todos.notes"
+            go_type:
+              type: "string"
+              pointer: true
+          - column: "todos.due_date"
+            go_type:
+              type: "time.Time"
+              pointer: true
+          - column: "todos.completed_at"
+            go_type:
+              type: "time.Time"
+              pointer: true
+          - column: "todos.created_at"
+            go_type:
+              type: "time.Time"
+          - column: "todos.updated_at"
+            go_type:
+              type: "time.Time"

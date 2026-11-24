@@ -8,7 +8,8 @@ See [plan.md](plan.md) for the full architecture and decisions.
 
 ## Status
 
-Scaffold — tooling, CI/CD, and Docker in place; features not yet implemented.
+Migrations, auth (one-time setup, login, sessions), and the todos service layer
+are in place. Next: the tabbed todo UI and the JSON API.
 
 ## Development
 
@@ -16,6 +17,7 @@ Scaffold — tooling, CI/CD, and Docker in place; features not yet implemented.
 mise install                        # installs pinned Go, golangci-lint, sqlc, goose
 mise exec -- go test ./...
 mise exec -- golangci-lint run
+mise exec -- sqlc generate          # after editing internal/todos/queries
 ```
 
 ## Deploy

@@ -13,8 +13,32 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/dfalling/tareas/internal/db"
 )
+
+// lockTestDB holds db.TestLockID on its own pooled connection for the whole
+// test: `go test ./...` runs package test binaries in parallel against one
+// shared TEST_DATABASE_URL, and this test truncates all tables — the
+// advisory lock keeps it from truncating under another package's
+// integration test (see internal/todos).
+func lockTestDB(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquire connection for test lock: %v", err)
+	}
+	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", db.TestLockID); err != nil {
+		conn.Release()
+		t.Fatalf("acquire test lock: %v", err)
+	}
+	t.Cleanup(func() {
+		// Uncancellable: a canceled test must still release the lock.
+		_, _ = conn.Exec(context.WithoutCancel(ctx), "SELECT pg_advisory_unlock($1)", db.TestLockID)
+		conn.Release()
+	})
+}
 
 // TestAuthFlow exercises the full cookie flow against a real Postgres when
 // TEST_DATABASE_URL is set (the CI test job provides one): setup bootstrap,
@@ -31,7 +55,11 @@ func TestAuthFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
-	defer pool.Close()
+	// Cleanup order matters: t.Cleanup runs last-registered-first, so
+	// lockTestDB's cleanup (registered below) releases its connection —
+	// the one holding the advisory lock — before the pool closes.
+	t.Cleanup(pool.Close)
+	lockTestDB(t, ctx, pool)
 	if err := db.Migrate(ctx, dsn); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
