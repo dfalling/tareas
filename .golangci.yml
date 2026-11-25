@@ -26,6 +26,14 @@ linters:
         linters:
           - gosec
         text: "G710"
+      # The healthcheck helper probes the address its own container's server
+      # listens on; LISTEN_ADDR is operator-supplied env — the same source the
+      # server itself binds — so gosec's SSRF taint analysis (G704) flags a
+      # request that is tautologically local.
+      - path: cmd/healthcheck/main\.go
+        linters:
+          - gosec
+        text: "G704"
 
 formatters:
   enable:

@@ -1,5 +1,6 @@
 # Local development / self-hosted deployment.
-# For production, supply secrets via Docker secrets or an uncommitted .env.
+# Supply secrets in an uncommitted .env next to this file (see .env.example):
+#   cp .env.example .env   # then edit
 
 services:
   app:
@@ -8,21 +9,31 @@ services:
     restart: unless-stopped
     environment:
       LISTEN_ADDR: ":8080"
-      DATABASE_URL: "postgres://tareas:password@db:5432/tareas?sslmode=disable"
+      DATABASE_URL: "postgres://tareas:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/tareas?sslmode=disable"
       APP_TIMEZONE: "UTC"
       APP_LOCALE: "en"
+      GOMEMLIMIT: "64MiB" # soft ceiling (plan §11); the app idles at 15–40 MiB
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/healthcheck"] # distroless has no shell; see cmd/healthcheck
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   db:
     image: postgres:18-alpine
     restart: unless-stopped
+    # Low-memory tuning (plan §11); flags instead of a mounted conf keeps the
+    # deployment a single file.
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "work_mem=4MB", "-c", "max_connections=20"]
     environment:
       POSTGRES_USER: tareas
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
       POSTGRES_DB: tareas
     volumes:
       - pgdata:/var/lib/postgresql/data

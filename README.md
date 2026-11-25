@@ -53,4 +53,26 @@ mise exec -- sqlc generate          # after editing internal/todos/queries or in
 ## Deploy
 
 CI pushes `ghcr.io/dfalling/tareas:latest` on every push to `main`.
-Run with `docker compose up -d` on the server.
+
+1. On the host: `cp .env.example .env` and set a real `POSTGRES_PASSWORD`
+   (compose refuses to start without it).
+2. `docker compose pull && docker compose up -d`. Migrations run on app
+   startup under a Postgres advisory lock — no separate migration step.
+3. Compose healthchecks the app against `/healthz` via the static
+   `healthcheck` binary baked into the image (distroless has no shell, so
+   the check cannot be a shell snippet), and the database with `pg_isready`.
+   The app runs with `GOMEMLIMIT=64MiB` and Postgres with the low-memory
+   settings from plan §11.
+
+### Backups
+
+Decided (plan §11): nightly host-cron `pg_dump` — the dataset is small and a
+logical dump restores cleanly across Postgres versions, which volume
+snapshots do not guarantee.
+
+```sh
+# crontab -e on the host
+0 3 * * * cd /srv/tareas && docker compose exec -T db pg_dump -U tareas tareas | gzip > /var/backups/tareas/$(date +\%F).sql.gz
+```
+
+Restore with `gunzip -c <dump> | docker compose exec -T db psql -U tareas -d tareas`.
