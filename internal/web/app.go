@@ -147,7 +147,6 @@ type todoItem struct {
 	Title      string
 	Completed  bool
 	ToggleAria string
-	DeleteAria string
 	Overdue    string // localized "overdue · dd-mm-yy"; empty when not overdue
 	Done       string // localized "done today"/"done dd-mm-yy"; completed only
 }

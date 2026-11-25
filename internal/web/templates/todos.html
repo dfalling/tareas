@@ -43,10 +43,6 @@
         <a class="title" href="/todos/{{.ID}}/edit?view={{$list.View}}">{{.Title}}</a>
         {{with .Overdue}}<span class="overdue">{{.}}</span>{{end}}
         {{with .Done}}<span class="done">{{.}}</span>{{end}}
-        <form method="post" action="/todos/{{.ID}}/delete?view={{$list.View}}" class="inline">
-            <input type="hidden" name="csrf_token" value="{{$list.CSRF}}">
-            <button type="submit" class="remove" aria-label="{{.DeleteAria}}">✕</button>
-        </form>
     </li>
     {{end}}
 </ul>

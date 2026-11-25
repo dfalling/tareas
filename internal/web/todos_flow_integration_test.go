@@ -191,7 +191,15 @@ func TestTodoWebFlow(t *testing.T) {
 		t.Fatalf("POST /todos bad date: status %d, want 422 with message and preserved title", res.StatusCode)
 	}
 
-	// Delete confirm page names the todo; confirming removes it for good.
+	// Deleting is two steps from the edit page: the list has no delete
+	// affordance, the edit page links to the confirmation page, and only the
+	// confirmation POST removes the todo for good.
+	if strings.Contains(body("/todos?view=unscheduled"), "/todos/1/delete") {
+		t.Fatal("list tab still offers a delete affordance")
+	}
+	if !strings.Contains(body("/todos/1/edit?view=unscheduled"), `href="/todos/1/delete?view=unscheduled"`) {
+		t.Fatal("edit page does not link to the delete confirmation")
+	}
 	if !strings.Contains(body("/todos/1/delete?view=unscheduled"), "Delete &#39;Buy oat milk&#39;?") {
 		t.Fatal("delete confirmation does not name the todo")
 	}

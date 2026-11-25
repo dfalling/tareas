@@ -53,6 +53,7 @@ var messages = map[string]catalog{
 		"edit_save":      "Save",
 		"edit_cancel":    "Cancel",
 		"edit_clear_due": "Clear due date",
+		"edit_delete":    "Delete todo",
 
 		"tokens_title":  "API tokens",
 		"tokens_intro":  "Tokens let API clients access your todos without your password. Copy a new token when you create it; it is shown only once.",
@@ -83,7 +84,6 @@ var messages = map[string]catalog{
 		"delete_cancel":   "Cancel",
 
 		"toggle_aria": "Toggle {{.Title}}",
-		"delete_aria": "Delete {{.Title}}",
 
 		"todo_overdue": "overdue · {{.Date}}",
 		"done_today":   "done today",
@@ -141,6 +141,7 @@ var messages = map[string]catalog{
 		"edit_save":      "Guardar",
 		"edit_cancel":    "Cancelar",
 		"edit_clear_due": "Quitar fecha",
+		"edit_delete":    "Eliminar tarea",
 
 		"tokens_title":  "Tokens de API",
 		"tokens_intro":  "Los tokens permiten que clientes de la API accedan a tus tareas sin tu contraseña. Copia un token nuevo al crearlo; solo se muestra una vez.",
@@ -171,7 +172,6 @@ var messages = map[string]catalog{
 		"delete_cancel":   "Cancelar",
 
 		"toggle_aria": "Cambiar {{.Title}}",
-		"delete_aria": "Eliminar {{.Title}}",
 
 		"todo_overdue": "atrasada · {{.Date}}",
 		"done_today":   "hecha hoy",

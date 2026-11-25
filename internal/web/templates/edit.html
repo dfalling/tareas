@@ -15,4 +15,6 @@
         <a href="/todos?view={{.Edit.View}}" class="button">{{.T "edit_cancel"}}</a>
     </div>
 </form>
+<hr>
+<a href="/todos/{{.Edit.ID}}/delete?view={{.Edit.View}}" class="button danger">{{.T "edit_delete"}}</a>
 {{end}}

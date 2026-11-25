@@ -40,7 +40,7 @@ a.button, button {
     cursor: pointer;
 }
 
-button.danger { color: var(--danger); border-color: #f3c1c1; }
+button.danger, a.button.danger { color: var(--danger); border-color: #f3c1c1; }
 button.secondary { color: var(--muted); }
 
 h1 { font-size: 1.25rem; }
@@ -113,15 +113,6 @@ button.checkbox {
 
 li.todo.done button.checkbox { border-color: var(--accent); background: var(--accent); }
 li.todo.done button.checkbox::after { content: "✓"; color: #fff; font-size: .8rem; line-height: 1; }
-
-button.remove {
-    border: none;
-    background: none;
-    color: var(--muted);
-    padding: .25rem .4rem;
-}
-
-button.remove:hover { color: var(--danger); }
 
 span.overdue { color: var(--danger); font-size: .875rem; white-space: nowrap; }
 span.done { color: var(--muted); font-size: .875rem; white-space: nowrap; }

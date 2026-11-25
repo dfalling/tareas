@@ -243,7 +243,6 @@ func (a *App) items(list []todos.Todo, today time.Time) []todoItem {
 			Title:      t.Title,
 			Completed:  t.Completed,
 			ToggleAria: a.tf("toggle_aria", map[string]string{"Title": t.Title}),
-			DeleteAria: a.tf("delete_aria", map[string]string{"Title": t.Title}),
 		}
 		if todos.IsOverdue(t, today) {
 			item.Overdue = a.tf("todo_overdue", map[string]string{"Date": a.dateOf(t.DueDate)})
