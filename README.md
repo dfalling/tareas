@@ -10,8 +10,11 @@ See [plan.md](plan.md) for the full architecture and decisions.
 
 Migrations, auth, the todos service layer, the server-rendered todo UI
 (tabs, create/toggle/edit/delete), the JSON API, and the API-token settings
-page are in place. Next: i18n message-table polish and ops (healthz checks,
-shutdown, backups, first deploy).
+page are in place. The i18n message tables (step 7) were audited complete
+with no code change needed: full `en` + `es` catalogs, a parity test, and
+every UI string already routed through `T`. `golang.org/x/text` is deferred
+until a plural or locale-formatting consumer exists. Next: ops polish
+(request body limits, compose healthcheck, Postgres tuning, backups).
 
 ## REST API (`/api/v1`)
 
