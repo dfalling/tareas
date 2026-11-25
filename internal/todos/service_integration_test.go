@@ -246,6 +246,86 @@ func TestTodoService(t *testing.T) {
 	}
 }
 
+// TestPurgeCompleted exercises the auto-delete purge against a real Postgres
+// when TEST_DATABASE_URL is set: it removes only this user's completed todos
+// older than the cutoff and never touches active rows or other users' rows.
+// It is skipped otherwise.
+func TestPurgeCompleted(t *testing.T) {
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set")
+	}
+
+	ctx := context.Background()
+	pool, err := db.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	lockTestDB(t, ctx, pool)
+	if err := db.Migrate(ctx, dsn); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	if _, err := pool.Exec(ctx, "TRUNCATE users, todos, api_tokens, sessions RESTART IDENTITY CASCADE"); err != nil {
+		t.Fatalf("truncate: %v", err)
+	}
+
+	userStore := users.NewStore(pool)
+	owner, err := userStore.Create(ctx, "owner@example.com", "not-a-real-hash")
+	if err != nil {
+		t.Fatalf("create owner: %v", err)
+	}
+	other, err := userStore.Create(ctx, "other@example.com", "not-a-real-hash")
+	if err != nil {
+		t.Fatalf("create other: %v", err)
+	}
+
+	svc := NewService(pool, time.UTC)
+
+	// completedAgo creates a todo, completes it, and backdates completed_at
+	// so the purge cutoff can be exercised without waiting real days.
+	completedAgo := func(userID int64, title string, age time.Duration) Todo {
+		t.Helper()
+		td, err := svc.Create(ctx, userID, CreateInput{Title: title})
+		if err != nil {
+			t.Fatalf("create %s: %v", title, err)
+		}
+		if _, err := svc.Toggle(ctx, userID, td.ID); err != nil {
+			t.Fatalf("toggle %s: %v", title, err)
+		}
+		if _, err := pool.Exec(ctx, "UPDATE todos SET completed_at = $1 WHERE id = $2",
+			time.Now().Add(-age), td.ID); err != nil {
+			t.Fatalf("backdate %s: %v", title, err)
+		}
+		return td
+	}
+
+	old := completedAgo(owner.ID, "old", 72*time.Hour)       // past a 1-day window
+	recent := completedAgo(owner.ID, "recent", 12*time.Hour) // inside it
+	active, err := svc.Create(ctx, owner.ID, CreateInput{Title: "active"})
+	if err != nil {
+		t.Fatalf("create active: %v", err)
+	}
+	foreign := completedAgo(other.ID, "foreign", 72*time.Hour) // another user's
+
+	n, err := svc.PurgeCompleted(ctx, owner.ID, time.Now().Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("purge: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("purge removed %d rows, want 1", n)
+	}
+
+	if _, err := svc.ByID(ctx, owner.ID, old.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("old completed todo survived the purge: err = %v", err)
+	}
+	for _, keep := range []struct{ userID, id int64 }{{owner.ID, recent.ID}, {owner.ID, active.ID}, {other.ID, foreign.ID}} {
+		if _, err := svc.ByID(ctx, keep.userID, keep.id); err != nil {
+			t.Errorf("todo %d should have survived the purge: %v", keep.id, err)
+		}
+	}
+}
+
 func ids(list []Todo) []int64 {
 	out := make([]int64, len(list))
 	for i, t := range list {

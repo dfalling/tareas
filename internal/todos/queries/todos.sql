@@ -68,3 +68,12 @@ RETURNING id, user_id, title, notes, due_date, completed, completed_at, created_
 -- name: DeleteTodo :execrows
 DELETE FROM todos
 WHERE id = $1 AND user_id = $2;
+
+-- Maintenance purge for auto-delete: hard-deletes this user's completed
+-- todos completed before the cutoff (now minus the user's window in days).
+-- RowsAffected reports how many rows went away, for the job's log line.
+-- completed_at is never NULL on completed rows (toggle stamps it), so the
+-- comparison is exact; active rows never match.
+-- name: DeleteCompletedBefore :execrows
+DELETE FROM todos
+WHERE user_id = $1 AND completed AND completed_at < $2;

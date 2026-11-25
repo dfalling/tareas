@@ -70,6 +70,8 @@ func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string, loc *ti
 	mux.Handle("POST /todos/{id}/toggle", app.requireAuth(http.HandlerFunc(app.todoToggle)))
 	mux.Handle("GET /todos/{id}/delete", app.requireAuth(http.HandlerFunc(app.todoDeleteConfirm)))
 	mux.Handle("POST /todos/{id}/delete", app.requireAuth(http.HandlerFunc(app.todoDelete)))
+	mux.Handle("GET /settings", app.requireAuth(http.HandlerFunc(app.settingsPage)))
+	mux.Handle("POST /settings", app.requireAuth(http.HandlerFunc(app.settingsSubmit)))
 	mux.Handle("GET /settings/tokens", app.requireAuth(http.HandlerFunc(app.tokensPage)))
 	mux.Handle("POST /settings/tokens", app.requireAuth(http.HandlerFunc(app.tokensCreate)))
 	mux.Handle("POST /settings/tokens/{id}/revoke", app.requireAuth(http.HandlerFunc(app.tokensRevoke)))
@@ -104,7 +106,7 @@ func (a *App) Routes() http.Handler {
 }
 
 func parseTemplates() map[string]*template.Template {
-	pages := []string{"setup.html", "login.html", "todos.html", "edit.html", "delete.html", "tokens.html"}
+	pages := []string{"setup.html", "login.html", "todos.html", "edit.html", "delete.html", "tokens.html", "settings.html"}
 	templates := make(map[string]*template.Template, len(pages))
 	for _, page := range pages {
 		t := template.Must(template.ParseFS(assetFS, "templates/base.html", "templates/"+page))
@@ -123,10 +125,11 @@ type viewData struct {
 	Flash         string
 	Error         string
 
-	List   *listPage
-	Edit   *editPage
-	Delete *deletePage
-	Tokens *tokensPage
+	List     *listPage
+	Edit     *editPage
+	Delete   *deletePage
+	Tokens   *tokensPage
+	Settings *settingsPage
 }
 
 // tabLink is one entry of the tab navigation.
@@ -219,6 +222,13 @@ type tokensPage struct {
 // error, so nothing the user typed is lost.
 type tokensForm struct {
 	Name string
+}
+
+// settingsPage is the payload of the general settings page. AutoDeleteDays
+// is the input's value: "" = never delete, otherwise the configured number
+// of days (also used to redisplay what was typed after a validation error).
+type settingsPage struct {
+	AutoDeleteDays string
 }
 
 // T translates a UI key for the page's locale. A method (not a func field)

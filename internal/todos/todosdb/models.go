@@ -40,8 +40,9 @@ type Todo struct {
 }
 
 type User struct {
-	ID           int64
-	Email        string
-	PasswordHash string
-	CreatedAt    pgtype.Timestamptz
+	ID                      int64
+	Email                   string
+	PasswordHash            string
+	CreatedAt               pgtype.Timestamptz
+	AutoDeleteCompletedDays *int32
 }

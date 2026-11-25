@@ -182,6 +182,17 @@ func (s *Service) Delete(ctx context.Context, userID, id int64) error {
 	return nil
 }
 
+// PurgeCompleted hard-deletes the user's completed todos that were completed
+// before cutoff, returning how many rows went away. The auto-delete job in
+// cmd/server calls it per user, with cutoff = now minus that user's window;
+// it never touches active todos or other users' rows.
+func (s *Service) PurgeCompleted(ctx context.Context, userID int64, cutoff time.Time) (int64, error) {
+	return s.q.DeleteCompletedBefore(ctx, todosdb.DeleteCompletedBeforeParams{
+		UserID:      userID,
+		CompletedAt: &cutoff,
+	})
+}
+
 // mapNoRows translates "no such row" into the package's ErrNotFound.
 func mapNoRows(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {

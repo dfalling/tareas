@@ -51,6 +51,29 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, e
 	return i, err
 }
 
+const deleteCompletedBefore = `-- name: DeleteCompletedBefore :execrows
+DELETE FROM todos
+WHERE user_id = $1 AND completed AND completed_at < $2
+`
+
+type DeleteCompletedBeforeParams struct {
+	UserID      int64
+	CompletedAt *time.Time
+}
+
+// Maintenance purge for auto-delete: hard-deletes this user's completed
+// todos completed before the cutoff (now minus the user's window in days).
+// RowsAffected reports how many rows went away, for the job's log line.
+// completed_at is never NULL on completed rows (toggle stamps it), so the
+// comparison is exact; active rows never match.
+func (q *Queries) DeleteCompletedBefore(ctx context.Context, arg DeleteCompletedBeforeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteCompletedBefore, arg.UserID, arg.CompletedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteTodo = `-- name: DeleteTodo :execrows
 DELETE FROM todos
 WHERE id = $1 AND user_id = $2

@@ -40,6 +40,17 @@ curl -H "Authorization: Bearer $TOKEN" https://host/api/v1/todos
 Errors are `{"error": "..."}`: 400 malformed JSON, 401 missing/bad/expired
 token, 404 unknown id, 422 validation.
 
+## Settings
+
+The *Settings* page in the top navigation holds per-account preferences:
+
+- **Auto-delete completed todos** — completed todos are permanently deleted
+  N days (1–3650) after completion; leave the field empty to keep them
+  forever (the default). A maintenance sweep runs hourly, so deletion can
+  lag up to an hour past the deadline. The setting is stored per user
+  (`users.auto_delete_completed_days`), so a future multi-user version keeps
+  accounts independent.
+
 ## Development
 
 ```sh

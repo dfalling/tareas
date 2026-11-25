@@ -20,7 +20,9 @@ import (
 	"github.com/dfalling/tareas/internal/api"
 	"github.com/dfalling/tareas/internal/db"
 	"github.com/dfalling/tareas/internal/ratelimit"
+	"github.com/dfalling/tareas/internal/todos"
 	"github.com/dfalling/tareas/internal/tokens"
+	"github.com/dfalling/tareas/internal/users"
 	"github.com/dfalling/tareas/internal/web"
 )
 
@@ -66,10 +68,12 @@ func run() error {
 	root.Handle("/api/v1/", apiApp.Routes())
 	root.Handle("/", app.Routes())
 
-	// Hygiene: purge expired API tokens hourly. (scs purges its own
-	// sessions.) It exits with the shutdown signal.
+	// Hygiene: purge expired API tokens hourly, and auto-delete completed
+	// todos per each user's configured window. (scs purges its own
+	// sessions.) Both exit with the shutdown signal.
 	tokenStore := tokens.NewStore(pool)
 	go purgeExpiredTokens(ctx, tokenStore)
+	go purgeCompletedTodos(ctx, users.NewStore(pool), todos.NewService(pool, loc))
 
 	srv := &http.Server{
 		Addr:              addr,
@@ -126,6 +130,38 @@ func purgeExpiredTokens(ctx context.Context, store *tokens.Store) {
 			}
 			if n > 0 {
 				slog.Info("purged expired api tokens", "count", n)
+			}
+		}
+	}
+}
+
+// purgeCompletedTodos hourly hard-deletes each user's completed todos older
+// than that user's auto-delete window (users.auto_delete_completed_days;
+// NULL = never, so unconfigured users are skipped entirely). Cutoffs are
+// computed here so the service stays a thin, testable delete-by-cutoff.
+func purgeCompletedTodos(ctx context.Context, userStore *users.Store, todoSvc *todos.Service) {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			settings, err := userStore.AutoDeleteSettings(ctx)
+			if err != nil {
+				slog.Error("list auto-delete settings", "err", err)
+				continue
+			}
+			for _, s := range settings {
+				cutoff := time.Now().AddDate(0, 0, -s.Days)
+				n, err := todoSvc.PurgeCompleted(ctx, s.UserID, cutoff)
+				if err != nil {
+					slog.Error("purge completed todos", "user", s.UserID, "err", err)
+					continue
+				}
+				if n > 0 {
+					slog.Info("purged completed todos", "user", s.UserID, "count", n)
+				}
 			}
 		}
 	}

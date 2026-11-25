@@ -16,6 +16,7 @@ var messages = map[string]catalog{
 	"en": {
 		"nav_logout":            "Log out",
 		"nav_tokens":            "API tokens",
+		"nav_settings":          "Settings",
 		"login_title":           "Log in",
 		"login_email_label":     "Email",
 		"login_password_label":  "Password",
@@ -69,6 +70,13 @@ var messages = map[string]catalog{
 		"flash_token_created": "Token created — copy it now, it will not be shown again: {{.Token}}",
 		"flash_token_revoked": "Token revoked.",
 
+		"settings_title":               "Settings",
+		"settings_save":                "Save",
+		"settings_auto_delete_label":   "Auto-delete completed todos",
+		"settings_auto_delete_hint":    "Completed todos are permanently deleted this many days after completion. Leave the field empty to keep them forever.",
+		"settings_auto_delete_invalid": "Enter a number of days between 1 and 3650, or leave the field empty.",
+		"flash_settings_saved":         "Settings saved.",
+
 		"delete_title":    "Delete todo",
 		"delete_question": "Delete '{{.Title}}'? This cannot be undone.",
 		"delete_confirm":  "Yes, delete",
@@ -96,6 +104,7 @@ var messages = map[string]catalog{
 	"es": {
 		"nav_logout":            "Salir",
 		"nav_tokens":            "Tokens de API",
+		"nav_settings":          "Ajustes",
 		"login_title":           "Iniciar sesión",
 		"login_email_label":     "Correo electrónico",
 		"login_password_label":  "Contraseña",
@@ -148,6 +157,13 @@ var messages = map[string]catalog{
 		"tokens_created":      "Creado el {{.Date}}",
 		"flash_token_created": "Token creado: cópialo ahora, no se volverá a mostrar: {{.Token}}",
 		"flash_token_revoked": "Token revocado.",
+
+		"settings_title":               "Ajustes",
+		"settings_save":                "Guardar",
+		"settings_auto_delete_label":   "Autoeliminar tareas completadas",
+		"settings_auto_delete_hint":    "Las tareas completadas se eliminan de forma permanente al pasar estos días desde que se completaron. Deja el campo vacío para conservarlas siempre.",
+		"settings_auto_delete_invalid": "Introduce un número de días entre 1 y 3650, o deja el campo vacío.",
+		"flash_settings_saved":         "Ajustes guardados.",
 
 		"delete_title":    "Eliminar tarea",
 		"delete_question": "¿Eliminar '{{.Title}}'? No se puede deshacer.",
