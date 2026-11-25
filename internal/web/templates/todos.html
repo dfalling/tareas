@@ -7,10 +7,12 @@
     <input type="hidden" name="csrf_token" value="{{.CSRF}}">
     <input type="text" name="title" value="{{.List.Create.Title}}" required maxlength="500"
            aria-label="{{.T "label_title"}}" autofocus>
-    <input type="text" name="notes" value="{{.List.Create.Notes}}" maxlength="10000"
-           aria-label="{{.T "label_notes"}}">
     <input type="date" name="due_date" value="{{.List.Create.DueDate}}" aria-label="{{.T "label_due"}}">
     <button type="submit">{{.T "create_submit"}}</button>
+    <details class="notes">
+        <summary>{{.T "label_notes"}}</summary>
+        <textarea name="notes" maxlength="10000" rows="4" aria-label="{{.T "label_notes"}}">{{.List.Create.Notes}}</textarea>
+    </details>
 </form>
 
 {{with .Error}}<p class="error">{{.}}</p>{{end}}

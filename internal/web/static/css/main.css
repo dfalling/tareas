@@ -65,9 +65,11 @@ h2 { font-size: .95rem; color: var(--muted); margin: 1.25rem 0 .25rem; }
     font-weight: 600;
 }
 
-form.create { display: flex; gap: .5rem; margin-bottom: 1rem; }
+form.create { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
 form.create input[name="title"] { flex: 2 1 30%; }
-form.create input[name="notes"] { flex: 2 1 30%; }
+form.create details.notes { flex: 1 1 100%; }
+form.create summary { color: var(--muted); cursor: pointer; width: fit-content; }
+form.create textarea { width: 100%; }
 
 input, textarea {
     font: inherit;
