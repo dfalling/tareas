@@ -8,13 +8,12 @@ See [plan.md](plan.md) for the full architecture and decisions.
 
 ## Status
 
-Migrations, auth, the todos service layer, the server-rendered todo UI
-(tabs, create/toggle/edit/delete), the JSON API, and the API-token settings
-page are in place. The i18n message tables (step 7) were audited complete
-with no code change needed: full `en` + `es` catalogs, a parity test, and
-every UI string already routed through `T`. `golang.org/x/text` is deferred
-until a plural or locale-formatting consumer exists. Next: ops polish
-(request body limits, compose healthcheck, Postgres tuning, backups).
+The build order in plan.md §14 is complete: migrations, auth, todos
+service, web UI, JSON API + token management, i18n, and ops polish
+(request body limits, compose healthcheck, GOMEMLIMIT, Postgres tuning,
+secrets via .env, documented `pg_dump` backups). Remaining: the first real
+deploy (push to main → GHCR → `compose pull && up -d`) and the deferred
+MCP service (plan §13).
 
 ## REST API (`/api/v1`)
 
@@ -48,6 +47,16 @@ mise install                        # installs pinned Go, golangci-lint, sqlc, g
 mise exec -- go test ./...
 mise exec -- golangci-lint run
 mise exec -- sqlc generate          # after editing internal/todos/queries or internal/tokens/queries
+```
+
+Integration tests run against a real Postgres when `TEST_DATABASE_URL` is
+set (CI provides a service container). Locally, use a throwaway container
+on port 5544 — port 5432 on this host belongs to another project:
+
+```sh
+podman run -d --name tareas-test-pg -e POSTGRES_USER=tareas -e POSTGRES_PASSWORD=password -e POSTGRES_DB=tareas -p 5544:5432 docker.io/library/postgres:18-alpine
+TEST_DATABASE_URL=postgres://tareas:password@127.0.0.1:5544/tareas mise exec -- go test -race ./...
+podman rm -f tareas-test-pg
 ```
 
 ## Deploy
