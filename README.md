@@ -82,6 +82,21 @@ Migrations run on app startup under a Postgres advisory lock — no separate
 migration step. The app listens on `http://your-server:8080`; session
 cookies are `Secure`, so put your TLS proxy in front of it.
 
+### First run: create your account
+
+Open `http://your-server:8080/setup` and create your single account (email
+and a password of at least 8 characters). You are logged in straight away
+and land on the todo list.
+
+There is no registration: the setup page exists only while the users table
+is empty and disables itself afterwards (it then redirects to the login
+page). Claim yours promptly after the first start — before the app is
+reachable by anyone else — because whoever opens `/setup` first on a fresh
+database creates the account.
+
+API clients (and later the MCP service) authenticate with bearer tokens
+instead: create one on the *API tokens* settings page after logging in.
+
 Compose healthchecks both services: the app via the static `healthcheck`
 binary baked into the image probing `/healthz` (distroless has no shell, so
 the check cannot be a shell snippet), and the database with `pg_isready`.
