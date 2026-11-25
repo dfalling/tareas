@@ -77,7 +77,9 @@ func New(pool *pgxpool.Pool, session *scs.SessionManager, locale string, loc *ti
 	// unreachable because the mux pattern never routes those paths here.
 	mux.Handle("GET /static/", http.FileServerFS(assetFS))
 
-	app.csrf = nosurf.New(mux)
+	// limitBody sits inside CSRF but outside the handlers: the CSRF check
+	// parses the form body, so the cap must already apply there.
+	app.csrf = nosurf.New(limitBody(mux))
 	return app
 }
 
