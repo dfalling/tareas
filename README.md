@@ -63,15 +63,31 @@ podman rm -f tareas-test-pg
 
 CI pushes `ghcr.io/dfalling/tareas:latest` on every push to `main`.
 
-1. On the host: `cp .env.example .env` and set a real `POSTGRES_PASSWORD`
-   (compose refuses to start without it).
-2. `docker compose pull && docker compose up -d`. Migrations run on app
-   startup under a Postgres advisory lock — no separate migration step.
-3. Compose healthchecks the app against `/healthz` via the static
-   `healthcheck` binary baked into the image (distroless has no shell, so
-   the check cannot be a shell snippet), and the database with `pg_isready`.
-   The app runs with `GOMEMLIMIT=64MiB` and Postgres with the low-memory
-   settings from plan §11.
+### Self-hosting with Docker
+
+The repo ships a [`compose.yaml`](compose.yaml) running two services: the
+app (distroless, nonroot) and PostgreSQL 18 with a named volume. Secrets
+live in an uncommitted `.env` next to it — compose interpolates
+`POSTGRES_PASSWORD` and refuses to start without it (see
+[`.env.example`](.env.example)).
+
+```sh
+git clone https://github.com/dfalling/tareas && cd tareas
+cp .env.example .env          # then set a real POSTGRES_PASSWORD
+docker compose pull
+docker compose up -d
+```
+
+Migrations run on app startup under a Postgres advisory lock — no separate
+migration step. The app listens on `http://your-server:8080`; session
+cookies are `Secure`, so put your TLS proxy in front of it.
+
+Compose healthchecks both services: the app via the static `healthcheck`
+binary baked into the image probing `/healthz` (distroless has no shell, so
+the check cannot be a shell snippet), and the database with `pg_isready`.
+The app runs with a `GOMEMLIMIT=64MiB` soft ceiling; Postgres gets plan
+§11's low-memory settings (shared_buffers 64MB, work_mem 4MB,
+max_connections 20).
 
 ### Backups
 
