@@ -4,16 +4,13 @@ A tiny self-hosted todo app: single-user, server-rendered (no JS required),
 JSON REST API, Postgres-backed. MCP integration is planned as a separate
 service that talks to the API.
 
-See [plan.md](plan.md) for the full architecture and decisions.
-
 ## Status
 
-The build order in plan.md §14 is complete: migrations, auth, todos
-service, web UI, JSON API + token management, i18n, and ops polish
-(request body limits, compose healthcheck, GOMEMLIMIT, Postgres tuning,
-secrets via .env, documented `pg_dump` backups). Remaining: the first real
-deploy (push to main → GHCR → `compose pull && up -d`) and the deferred
-MCP service (plan §13).
+Built and working: migrations, auth, todos service, web UI, JSON API +
+token management, i18n, settings, and ops polish (request body limits,
+compose healthcheck, GOMEMLIMIT, Postgres tuning, secrets via .env,
+documented `pg_dump` backups). Remaining: the first real deploy (push to
+main → GHCR → `compose pull && up -d`) and the deferred MCP service.
 
 ## REST API (`/api/v1`)
 
@@ -111,13 +108,13 @@ instead: create one on the *API tokens* settings page after logging in.
 Compose healthchecks both services: the app via the static `healthcheck`
 binary baked into the image probing `/healthz` (distroless has no shell, so
 the check cannot be a shell snippet), and the database with `pg_isready`.
-The app runs with a `GOMEMLIMIT=64MiB` soft ceiling; Postgres gets plan
-§11's low-memory settings (shared_buffers 64MB, work_mem 4MB,
+The app runs with a `GOMEMLIMIT=64MiB` soft ceiling; Postgres gets
+low-memory settings (shared_buffers 64MB, work_mem 4MB,
 max_connections 20).
 
 ### Backups
 
-Decided (plan §11): nightly host-cron `pg_dump` — the dataset is small and a
+Nightly host-cron `pg_dump` — the dataset is small and a
 logical dump restores cleanly across Postgres versions, which volume
 snapshots do not guarantee.
 
