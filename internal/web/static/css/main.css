@@ -1,10 +1,38 @@
 /* tareas — minimal no-framework styling for the server-rendered UI. */
 
 :root {
+    /* Light palette; overridden by the prefers-color-scheme: dark block below. */
+    color-scheme: light;
+    --text: #1f2937;
+    --bg: #f9fafb;
+    --surface: #fff;
     --line: #d5d9de;
     --muted: #6b7280;
     --danger: #b91c1c;
+    --danger-border: #f3c1c1;
     --accent: #2563eb;
+    --on-accent: #fff;
+    --flash-bg: #ecfdf5;
+    --flash-text: #065f46;
+    --flash-border: #a7f3d0;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --text: #e5e7eb;
+        --bg: #111827;
+        --surface: #1f2937;
+        --line: #374151;
+        --muted: #9ca3af;
+        --danger: #f87171;
+        --danger-border: #7f1d1d;
+        --accent: #60a5fa;
+        --on-accent: #111827;
+        --flash-bg: #064e3b;
+        --flash-text: #6ee7b7;
+        --flash-border: #065f46;
+    }
 }
 
 * { box-sizing: border-box; }
@@ -12,8 +40,8 @@
 body {
     font-family: system-ui, -apple-system, sans-serif;
     margin: 0;
-    color: #1f2937;
-    background: #f9fafb;
+    color: var(--text);
+    background: var(--bg);
 }
 
 nav {
@@ -21,7 +49,7 @@ nav {
     gap: 1rem;
     align-items: center;
     padding: .75rem 1rem;
-    background: #fff;
+    background: var(--surface);
     border-bottom: 1px solid var(--line);
 }
 
@@ -38,11 +66,12 @@ a.button, button {
     padding: .4rem .8rem;
     border: 1px solid var(--line);
     border-radius: .375rem;
-    background: #fff;
+    background: var(--surface);
+    color: var(--text);
     cursor: pointer;
 }
 
-button.danger, a.button.danger { color: var(--danger); border-color: #f3c1c1; }
+button.danger, a.button.danger { color: var(--danger); border-color: var(--danger-border); }
 button.secondary { color: var(--muted); }
 
 h1 { font-size: 1.25rem; }
@@ -78,7 +107,8 @@ input, textarea {
     padding: .4rem .6rem;
     border: 1px solid var(--line);
     border-radius: .375rem;
-    background: #fff;
+    background: var(--surface);
+    color: var(--text);
 }
 
 form.stack { display: grid; gap: .5rem; max-width: 30rem; }
@@ -107,14 +137,14 @@ button.checkbox {
     padding: 0;
     border: 2px solid var(--muted);
     border-radius: .25rem;
-    background: #fff;
+    background: var(--surface);
     flex: none;
     display: grid;
     place-items: center;
 }
 
 li.todo.done button.checkbox { border-color: var(--accent); background: var(--accent); }
-li.todo.done button.checkbox::after { content: "✓"; color: #fff; font-size: .8rem; line-height: 1; }
+li.todo.done button.checkbox::after { content: "✓"; color: var(--on-accent); font-size: .8rem; line-height: 1; }
 
 span.overdue { color: var(--danger); font-size: .875rem; white-space: nowrap; }
 span.done { color: var(--muted); font-size: .875rem; white-space: nowrap; }
@@ -125,9 +155,9 @@ p.flash {
     max-width: calc(40rem - 2rem);
     margin: .75rem auto 0;
     padding: .5rem .75rem;
-    background: #ecfdf5;
-    color: #065f46;
-    border: 1px solid #a7f3d0;
+    background: var(--flash-bg);
+    color: var(--flash-text);
+    border: 1px solid var(--flash-border);
     border-radius: .375rem;
 }
 
